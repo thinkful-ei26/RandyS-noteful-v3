@@ -14,7 +14,7 @@ const Note = require('../models/note');
 //       filter.title = { $regex: searchTerm, $options: 'i' };
 //     }
 
-//     return Note.find(filter).sort({ updatedAt: 'desc' });
+//     return Note.find(filter).sort({ updatedAt: 'content' });
 //   })
 //   .then(results => {
 //     console.log(results);
@@ -29,22 +29,22 @@ const Note = require('../models/note');
 
 
 // find by ID
-mongoose.connect(MONGODB_URI, { useNewUrlParser:true })
+// mongoose.connect(MONGODB_URI, { useNewUrlParser:true })
   
-  .then(() => {
-    let id = "000000000000000000000007";
-    return Note.findById(id);
-  })
-  .then(results => {
-    console.log(results);
-  })
-  .then(() => {
-    return mongoose.disconnect();
-  })
-  .catch(err => {
-    console.error(`ERROR: ${err.message}`);
-    console.error(err);
-  });
+//   .then(() => {
+//     let id = "000000000000000000000007";
+//     return Note.findById(id);
+//   })
+//   .then(results => {
+//     console.log(results);
+//   })
+//   .then(() => {
+//     return mongoose.disconnect();
+//   })
+//   .catch(err => {
+//     console.error(`ERROR: ${err.message}`);
+//     console.error(err);
+//   });
 
 //create 
 // mongoose.connect(MONGODB_URI, { useNewUrlParser:true })
