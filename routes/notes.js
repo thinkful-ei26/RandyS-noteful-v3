@@ -11,7 +11,9 @@ const Note = require('../models/note');
 
 /* ========== GET/READ ALL ITEMS ========== */
 router.get('/', (req, res, next) => {
-  const searchTerm = req.query.searchTerm;
+
+  
+  const searchTerm = req.query.searchTerm || '';
 
   return Note.find( { $or: [
     { title: { $regex: searchTerm, $options: 'i' }}, 
@@ -23,6 +25,7 @@ router.get('/', (req, res, next) => {
     .catch(err => {
       console.error(`ERROR: ${err.message}`);
       console.error(err);
+      res.sendStatus(500);
     });
 });
 
@@ -37,6 +40,7 @@ router.get('/:id', (req, res, next) => {
     .catch(err => {
       console.error(`ERROR: ${err.message}`);
       console.error(err);
+      res.sendStatus(500);
     });
  
 });
@@ -58,20 +62,22 @@ router.post('/', (req, res, next) => {
     content: req.body.content,
   })
     .then(results => {
-      res.status(201).json(results);
+      res.location(`http://${req.headers.host}/api/notes/${results.id}`).status(201).json(results);
     })
     .catch(err => {
       console.error(`ERROR: ${err.message}`);
       console.error(err);
+      res.sendStatus(500);
     });
 });
 
 /* ========== PUT/UPDATE A SINGLE ITEM ========== */
 router.put('/:id', (req, res, next) => {
-  const id = req.params.id;
+  const {id} = req.params;
   const updatedObj = {};
 
-  const updatableField = ['title'];
+  
+  const updatableField = ['title', 'content'];
 
   updatableField.forEach(field => {
     if (field in req.body) {
@@ -83,12 +89,15 @@ router.put('/:id', (req, res, next) => {
     {$set: updatedObj}, {new: true, upsert: true})
 
     .then(results => {
-      res.json(results);
+      
+      res.status(204).json(results);
+    
       
     })
     .catch(err => {
       console.error(`ERROR: ${err.message}`);
       console.error(err);
+      res.sendStatus(500);
     });
 });
 
