@@ -11,103 +11,177 @@ const Note = require('../models/note');
 
 /* ========== GET/READ ALL ITEMS ========== */
 router.get('/', (req, res, next) => {
+  const { searchTerm, folderId, tagId } = req.query;
 
-  
-  const searchTerm = req.query.searchTerm || '';
+  let filter = {};
 
-  return Note.find( { $or: [
-    { title: { $regex: searchTerm, $options: 'i' }}, 
-    { content: { $regex: searchTerm, $options: 'i' }}]})
+  if (searchTerm) {
+    const re = new RegExp(searchTerm, 'i');
+    filter.$or = [{'title': re}, {'content': re}];
+  }
+
+  if (folderId) {
+    filter.folderId = folderId;
+  }
+
+  if (tagId) {
+    filter.tags = tagId;
+  }
+
+  console.log(filter);
+
+  Note.find(filter)
+    .populate('tags')
     .sort({updateAt: 'desc'})
     .then(results => {
       res.json(results);
     })
     .catch(err => {
-      console.error(`ERROR: ${err.message}`);
-      console.error(err);
-      res.sendStatus(500);
+      next(err);
     });
 });
 
 /* ========== GET/READ A SINGLE ITEM ========== */
 router.get('/:id', (req, res, next) => {
-  const id = req.params.id;
+  const {id} = req.params;
+
+
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    const err = new Error('The `id` is not valid');
+    err.status = 400;
+    return next(err);
+  }
 
   Note.findById(id)
-    .then(results => {
-      res.json(results);
+    .populate('tags')
+    .then(result => {
+      if (result) {
+        res.json(result);
+      } else {
+        next();
+      }
     })
     .catch(err => {
-      console.error(`ERROR: ${err.message}`);
-      console.error(err);
-      res.sendStatus(500);
+      next(err);
     });
- 
 });
 
 /* ========== POST/CREATE AN ITEM ========== */
 router.post('/', (req, res, next) => {
-  const requiredFields = ['title', 'content'];
-  for (let i = 0; i < requiredFields.length; i++) {
-    const field = requiredFields[i];
-    if (!(field in req.body)) {
-      const message = `Missing \`${field}\` in request body`;
-      console.error(message);
-      return res.status(400).send(message);
+
+  const { title, content, folderId, tags } = req.body;
+
+
+  
+  if (!title) {
+    const err = new Error('Missing `title` in request body');
+    err.status = 400;
+    return next(err);
+  }
+  
+  const newNote = {title, content, folderId};
+  if (folderId === '') {
+    delete newNote.folderId;
+  }
+
+  if (tags.length > 0) {
+    newNote.tags = tags;
+  }
+
+  if (folderId && !mongoose.Types.ObjectId.isValid(folderId)) {
+    const err = new Error('The `folderId` is not valid');
+    err.status = 400;
+    return next(err);
+  }
+
+  for (let i = 0; i < tags.length; i++) {
+    if (tags && !mongoose.Types.ObjectId.isValid(tags[i])) {
+      const err = new Error('The `tags` is not valid');
+      err.status = 400;
+      return next(err);
     }
   }
 
-  Note.create({
-    title: req.body.title,
-    content: req.body.content,
-  })
-    .then(results => {
-      res.location(`http://${req.headers.host}/api/notes/${results.id}`).status(201).json(results);
+  Note.create(newNote)
+    .then(result => {
+      res.location(`http://${req.headers.host}/api/notes/${result.id}`).status(201).json(result);
     })
     .catch(err => {
-      console.error(`ERROR: ${err.message}`);
-      console.error(err);
-      res.sendStatus(500);
+      next(err);
     });
 });
 
 /* ========== PUT/UPDATE A SINGLE ITEM ========== */
 router.put('/:id', (req, res, next) => {
   const {id} = req.params;
-  const updatedObj = {};
+  const { title, content, folderId, tags } = req.body;
+
+  const updateNote = { title, content, folderId };
+  
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    const err = new Error('The `id` is not valid');
+    err.status = 400;
+    return next(err);
+  }
+
+  if (!title) {
+    const err = new Error('Missing `title` in request body');
+    err.status = 400;
+    return next(err);
+  }
+
+  if (folderId && !mongoose.Types.ObjectId.isValid(folderId)) {
+    const err = new Error('The `folderId` is not valid');
+    err.status = 400;
+    return next(err);
+  }
+  
+  if (tags.length > 0) {
+    updateNote.tags = tags;
+  }
+
+  for (let i = 0; i < tags.length; i++) {
+    if (tags && !mongoose.Types.ObjectId.isValid(tags[i])) {
+      const err = new Error('The `tags` is not valid');
+      err.status = 400;
+      return next(err);
+    }
+  }
 
   
-  const updatableField = ['title', 'content'];
-
-  updatableField.forEach(field => {
-    if (field in req.body) {
-      updatedObj[field] = req.body[field];
-    }
-  });
-
-  Note.findByIdAndUpdate(id,
-    {$set: updatedObj}, {new: true, upsert: true})
-
+  Note.findByIdAndUpdate(id, updateNote, {new: true})
+    .populate('tags')
     .then(results => {
-      
-      res.status(204).json(results);
-    
-      
+      if (results) {
+        console.log(results);
+        // res.status(204).json(results); why does this break client?
+        res.json(results);
+      } else {
+        next();
+      }
     })
     .catch(err => {
-      console.error(`ERROR: ${err.message}`);
-      console.error(err);
-      res.sendStatus(500);
+      next(err);
     });
 });
 
 /* ========== DELETE/REMOVE A SINGLE ITEM ========== */
 router.delete('/:id', (req, res, next) => {
-  const id = req.params.id;
+  const { id } = req.params;
 
-  Note.findByIdAndDelete(id)
-    .then(results => {
+  /***** Never trust users - validate input *****/
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    const err = new Error('The `id` is not valid');
+    err.status = 400;
+    return next(err);
+  }
+
+  Note.findByIdAndRemove(id)
+    .then(() => {
       res.status(204).end();
+    })
+    .catch(err => {
+      next(err);
     });
 });
 
