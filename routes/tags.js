@@ -54,7 +54,7 @@ router.post('/', (req, res, next) => {
   const newTag = {name};
 
   if (!name) {
-    const err = new Error('Missing `name` field in request body');
+    const err = new Error('Missing `name` in request body');
     err.status(400);
     return next(err);
   }
@@ -90,15 +90,14 @@ router.put('/:id', (req, res, next) => {
     return next(err);
   }
 
-  // Tag.find()
-  //   .then(result => {
-  //     console.log(result)
-  //       if (name === result) {
-  //         const err = new Error(`${name} tag already exists`);
-  //         err.status = 404;
-  //         return next(err);
-  //       }  
-  //   });
+  Tag.find()
+    .then(result => {
+      if (name === result) {
+        const err = new Error(`${name} tag already exists`);
+        err.status = 404;
+        return next(err);
+      }  
+    });
 
   Tag.findByIdAndUpdate(id, {name: name})
     .then(result => {

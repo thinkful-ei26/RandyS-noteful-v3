@@ -8,19 +8,22 @@ const app = require('../server');
 const { TEST_MONGODB_URI } = require('../config');
 
 const Note = require('../models/note');
+const Tag = require('../models/tag');
 
-const { notes } = require('../db/seed/notes');
+const { notes } = require('../db/seed/data');
+const { tags } = require('../db/seed/data');
 
 const expect = chai.expect;
 chai.use(chaiHttp);
 
-describe('Notes API resource', function() {
+describe('Noteful API - Notes', function() {
   before(function () {
     return mongoose.connect(TEST_MONGODB_URI)
       .then(() => mongoose.connection.db.dropDatabase());
   });
 
   beforeEach(function () {
+    Tag.insertMany(tags);
     return Note.insertMany(notes);
   });
 
@@ -82,15 +85,15 @@ describe('Notes API resource', function() {
       return Note.findOne()
         .then(_data => {
           data = _data;
+          console.log(data.id)
           // 2) then call the API with the ID
           return chai.request(app).get(`/api/notes/${data.id}`);
         })
         .then((res) => {
           expect(res).to.have.status(200);
           expect(res).to.be.json;
-  
           expect(res.body).to.be.an('object');
-          expect(res.body).to.have.keys('id', 'title', 'content', 'createdAt', 'updatedAt');
+          expect(res.body).to.have.keys('id', 'folderId', 'tags', 'title', 'content', 'createdAt', 'updatedAt');
   
           // 3) then compare database results to API response
           expect(res.body.id).to.equal(data.id);
@@ -106,7 +109,9 @@ describe('Notes API resource', function() {
     it('should create a new item when provided valid data', function () {
       const newItem = {
         'title': 'The best article about cats ever!',
-        'content': 'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor...'
+        'content': 'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor...',
+        'folderId': '',
+        'tags': []
       };
 
       let res;
@@ -120,7 +125,7 @@ describe('Notes API resource', function() {
           expect(res).to.have.header('location');
           expect(res).to.be.json;
           expect(res.body).to.be.a('object');
-          expect(res.body).to.have.keys('id', 'title', 'content', 'createdAt', 'updatedAt');
+          expect(res.body).to.have.keys('id', 'title', 'content', 'tags', 'folderId', 'createdAt', 'updatedAt');
           // 2) then call the database
           return Note.findById(res.body.id);
         })
@@ -129,6 +134,8 @@ describe('Notes API resource', function() {
           expect(res.body.id).to.equal(data.id);
           expect(res.body.title).to.equal(data.title);
           expect(res.body.content).to.equal(data.content);
+          expect(res.body.folderId).to.equal(data.folderId);
+          expect(res.body.tags).to.equal(data.tags);
           expect(new Date(res.body.createdAt)).to.eql(data.createdAt);
           expect(new Date(res.body.updatedAt)).to.eql(data.updatedAt);
         });
@@ -139,7 +146,9 @@ describe('Notes API resource', function() {
     it('should update and return a new item when provided valid ID and data', function() {
       let updateData = {
         title: 'Updated Title',
-        content: 'Updated Content'
+        content: 'Updated Content',
+        folderId: '',
+        tags: []
       };
 
       return Note
@@ -157,6 +166,9 @@ describe('Notes API resource', function() {
         .then(function(note) {
           expect(note.title).to.equal(updateData.title);
           expect(note.content).to.equal(updateData.content);
+          expect(note.folderId).to.equal(updateData.folderId);
+          expect(note.tags).to.equal(updateData.tags);
+
         });
     });
   });
