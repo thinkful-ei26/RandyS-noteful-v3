@@ -83,7 +83,7 @@ router.post('/', (req, res, next) => {
   if (folderId === '') {
     delete newNote.folderId;
   }
-
+  console.log('NEW NOTE:', newNote);
   if (tags.length > 0) {
     newNote.tags = tags;
   }
@@ -117,7 +117,7 @@ router.put('/:id', (req, res, next) => {
   const { title, content, folderId, tags } = req.body;
 
   const updateNote = { title, content, folderId };
-  
+
   if (!mongoose.Types.ObjectId.isValid(id)) {
     const err = new Error('The `id` is not valid');
     err.status = 400;
@@ -129,13 +129,23 @@ router.put('/:id', (req, res, next) => {
     err.status = 400;
     return next(err);
   }
+  
+  console.log('FOLDER ID:', folderId);
+  console.log(!mongoose.Types.ObjectId.isValid(folderId));
+  console.log(folderId && !mongoose.Types.ObjectId.isValid(folderId));
 
+  //note must have a folder
+  // if (folderId === '' || !mongoose.Types.ObjectId.isValid(folderId))
   if (folderId && !mongoose.Types.ObjectId.isValid(folderId)) {
     const err = new Error('The `folderId` is not valid');
     err.status = 400;
     return next(err);
   }
   
+  if (folderId === '') {
+    delete updateNote.folderId;
+  }
+
   if (tags.length > 0) {
     updateNote.tags = tags;
   }

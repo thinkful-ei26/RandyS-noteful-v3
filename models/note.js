@@ -10,7 +10,6 @@ const noteSchema = new mongoose.Schema({
   tags: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Tag'}]
 });
 
-
 noteSchema.set('timestamps', true);
 
 noteSchema.set('toJSON', {
